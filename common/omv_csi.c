@@ -69,6 +69,23 @@
 #define OMV_CSI_STATS_TAU_MS    (250)
 #endif
 
+// By default the framebuffer is always allocated as 2 bytes/pixel independent
+// of the actual pixel format.
+// The OpenmV Cam H7 (TARGET=OPENMV4) only has enough memory to manage a
+// grayscale image at full sensor resolution (e.g. VGA, WVGA2) at 1 byte/pixel.
+// This block sets the framebuffer allocation to 1 byte/pixel for the H7 to support
+// images at full resolution, but leaves it at the default for all other targets.
+#ifdef OPENMV4
+ // OpenMV Cam H7
+ #define FB_BYTES_PER_PX (1)
+#else
+ // all others
+ #define FB_BYTES_PER_PX (2)
+#endif
+// CAVEAT: On the H7 this will result in an error for anything other than grayscale
+// format, because the allocated framebuffer will always be smaller than what is
+// required for other formats.
+
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -1340,10 +1357,10 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand) {
     // TODO pass this to resize.
     #if OMV_CSI_HW_CROP_ENABLE
     // If hardware cropping is supported, use window size.
-    size_t frame_size = csi->fb->u * csi->fb->v * 2;
+    size_t frame_size = csi->fb->u * csi->fb->v * FB_BYTES_PER_PX;
     #else
     // Otherwise, use the real frame size.
-    size_t frame_size = csi->resolution[csi->framesize][0] * csi->resolution[csi->framesize][1] * 2;
+    size_t frame_size = csi->resolution[csi->framesize][0] * csi->resolution[csi->framesize][1] * FB_BYTES_PER_PX;
     #endif
 
     if (count == -1) {
